@@ -32,26 +32,13 @@ public class MainActivity2 extends AppCompatActivity {
         bd.cameraView.prepare(new Camera2View.Config.Builder()
                 .previewWidth(640)
                 .previewHeight(480)
-                .cameraId("120")
-                .rotation(270)
+                .cameraId("0")
+                .rotation(90)
                 .build());
         bd.startPreviewBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 bd.cameraView.startPreview();
-                bd.cameraView.stopPreview();
-
-                bd.cameraView.startPreview();
-                bd.cameraView.stopPreview();
-
-                bd.cameraView.startPreview();
-                bd.cameraView.stopPreview();
-
-                bd.cameraView.startPreview();
-                bd.cameraView.stopPreview();
-
-                bd.cameraView.startPreview();
-
             }
         });
         bd.stopPreviewBtn.setOnClickListener(new View.OnClickListener() {

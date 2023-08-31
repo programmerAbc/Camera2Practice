@@ -41,7 +41,7 @@ public class Camera2View extends FrameLayout {
     public static final String TAG = "Camera2View";
     public static final int STATE_IDLE = 0;
     public static final int STATE_PREPARED = 1;
-    public static final int STATE_STARTING_PREVIEWING = 2;
+    public static final int STATE_STARTING_PREVIEW = 2;
     public static final int STATE_PREVIEWING = 3;
 
     public static final int STATE_STOPPING_PREVIEWING = 4;
@@ -148,7 +148,7 @@ public class Camera2View extends FrameLayout {
             @Override
             public void run() {
                 if (!canStartPreview()) return;
-                setState(STATE_STARTING_PREVIEWING);
+                setState(STATE_STARTING_PREVIEW);
                 countDownLatch = new CountDownLatch(1);
                 ce = null;
                 try {

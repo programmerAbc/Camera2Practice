@@ -8,7 +8,7 @@
         android:id="@+id/cvf"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:implementationMode="compatible"
+        app:implementationMode="performance"
         app:scaleType="fillCenter" />
 
 </FrameLayout>
