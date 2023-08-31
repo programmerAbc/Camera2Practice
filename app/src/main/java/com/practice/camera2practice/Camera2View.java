@@ -3,6 +3,7 @@ package com.practice.camera2practice;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.ImageFormat;
+import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -19,6 +20,7 @@ import android.util.Log;
 import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.Surface;
+import android.view.TextureView;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
@@ -57,20 +59,19 @@ public class Camera2View extends FrameLayout {
     HandlerThread imageThread = null;
     Handler imageHandler = null;
 
-    CameraViewfinder cvf;
+    TextureView preview;
     int state = STATE_IDLE;
     Handler mainHandler;
 
     Config config;
     CameraManager cameraManager;
     ImageReader imageReader;
-    Surface cvfSurface;
+    Surface previewSurface;
 
 
     CameraDevice cameraDevice = null;
 
 
-    ViewfinderSurfaceRequest viewfinderSurfaceRequest;
     CameraCaptureSession cameraCaptureSession;
 
     public Camera2View(@NonNull Context context) {
@@ -96,10 +97,6 @@ public class Camera2View extends FrameLayout {
             public void run() {
                 if (getState() != STATE_IDLE) return;
                 Camera2View.this.config = config;
-                viewfinderSurfaceRequest = new ViewfinderSurfaceRequest.Builder(new Size(config.getPreviewWidth(), config.getPreviewHeight()))
-                        .setLensFacing(CameraCharacteristics.LENS_FACING_FRONT)
-                        .setSensorOrientation(config.getRotation())
-                        .build();
                 setState(STATE_PREPARED);
             }
         });
@@ -108,7 +105,7 @@ public class Camera2View extends FrameLayout {
 
     private void init() {
         LayoutInflater.from(getContext()).inflate(R.layout.camera2view, this, true);
-        cvf = findViewById(R.id.cvf);
+        preview = findViewById(R.id.preview);
         singleThreadExecutor = Executors.newSingleThreadExecutor();
         cameraManager = (CameraManager) getContext().getSystemService(Context.CAMERA_SERVICE);
         cameraThread = new HandlerThread("cameraThread");
@@ -208,6 +205,31 @@ public class Camera2View extends FrameLayout {
                     @Override
                     public void run() {
                         try {
+                            preview.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
+                                @Override
+                                public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
+
+                                }
+
+                                @Override
+                                public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {
+
+                                }
+
+                                @Override
+                                public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
+                                    return false;
+                                }
+
+                                @Override
+                                public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
+
+                                }
+                            });
+                            if (preview.isAvailable())
+
+
+
 
                             ListenableFuture<Surface> surfaceListenableFuture = cvf.requestSurfaceAsync(viewfinderSurfaceRequest);
                             Futures.addCallback(surfaceListenableFuture, new FutureCallback<Surface>() {

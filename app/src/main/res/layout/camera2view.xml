@@ -4,11 +4,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <androidx.camera.viewfinder.CameraViewfinder
-        android:id="@+id/cvf"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:implementationMode="performance"
-        app:scaleType="fillCenter" />
+  <TextureView
+      android:id="@+id/preview"
+      android:layout_width="match_parent"
+      android:layout_height="match_parent"/>
 
 </FrameLayout>
