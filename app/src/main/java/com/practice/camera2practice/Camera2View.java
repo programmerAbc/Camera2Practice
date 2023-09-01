@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
+import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -141,12 +143,21 @@ public class Camera2View extends FrameLayout {
         super.onLayout(changed, left, top, right, bottom);
         viewWidth = getWidth();
         viewHeight = getHeight();
+
+        float viewAspect = ((float) viewWidth) / viewHeight;
+        float previewAspect = ((float) config.getPreviewHeight()) / config.getPreviewWidth();
         Matrix matrix = new Matrix();
-        matrix.postRotate(config.getRotation(), viewWidth / 2, viewHeight / 2);
+        if (viewAspect>previewAspect){
+            matrix.postRotate(90);
+            matrix.postTranslate(viewWidth/2,0);
+            matrix.postScale(1,viewAspect/previewAspect);
+        }else{
+            matrix.postRotate(90);
+            matrix.postScale(previewAspect,viewAspect);
+        }
         preview.setTransform(matrix);
-//        Matrix matrix = new Matrix();
-//        matrix.postRotate(config.getRotation());
-//        preview.setTransform(matrix);
+
+
     }
 
     private void init(AttributeSet attrs) {
