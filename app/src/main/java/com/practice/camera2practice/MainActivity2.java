@@ -29,12 +29,6 @@ public class MainActivity2 extends AppCompatActivity {
     }
 
     private void init() {
-        bd.cameraView.prepare(new Camera2View.Config.Builder()
-                .previewWidth(640)
-                .previewHeight(480)
-                .cameraId("0")
-                .rotation(90)
-                .build());
         bd.startPreviewBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

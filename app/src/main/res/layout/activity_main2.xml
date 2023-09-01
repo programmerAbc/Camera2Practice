@@ -15,6 +15,10 @@
 
         <com.practice.camera2practice.Camera2View
             android:id="@+id/cameraView"
+            app:c2v_camera_id="120"
+            app:c2v_preview_width="640"
+            app:c2v_preview_height="480"
+            app:c2v_preview_rotation="90"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 

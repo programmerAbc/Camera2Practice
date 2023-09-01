@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <declare-styleable name="Camera2View">
+        <attr name="c2v_camera_id" format="string" />
+        <attr name="c2v_preview_width" format="integer" />
+        <attr name="c2v_preview_height" format="integer" />
+        <attr name="c2v_preview_rotation" format="integer" />
+    </declare-styleable>
+
+</resources>
