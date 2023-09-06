@@ -29,6 +29,8 @@ public class MainActivity2 extends AppCompatActivity {
     }
 
     private void init() {
+        bd.cameraView.setCameraId(0);
+        bd.cameraView.startPreview();
         bd.startPreviewBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -41,6 +43,32 @@ public class MainActivity2 extends AppCompatActivity {
                 bd.cameraView.stopPreview();
             }
         });
+        bd.rotate0Btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                bd.cameraView.setRotate(0);
+            }
+        });
+        bd.rotate90Btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                bd.cameraView.setRotate(90);
+            }
+        });
+        bd.rotate180Btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                bd.cameraView.setRotate(180);
+            }
+        });
+        bd.rotate270Btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                bd.cameraView.setRotate(270);
+            }
+        });
+
+
     }
 
     @Override

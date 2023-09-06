@@ -5,12 +5,9 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
-import android.graphics.Rect;
-import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
-import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
@@ -22,7 +19,6 @@ import android.os.Looper;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.TextureView;
@@ -30,20 +26,9 @@ import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.camera.viewfinder.CameraViewfinder;
-import androidx.camera.viewfinder.ViewfinderSurfaceRequest;
-import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.core.content.ContextCompat;
-
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-
-import org.checkerframework.checker.units.qual.C;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -143,38 +128,85 @@ public class Camera2View extends FrameLayout {
         super.onLayout(changed, left, top, right, bottom);
         viewWidth = getWidth();
         viewHeight = getHeight();
-
-        float viewAspect = ((float) viewWidth) / viewHeight;
-        float previewAspect = ((float) config.getPreviewHeight()) / config.getPreviewWidth();
         Matrix matrix = new Matrix();
-        if (viewAspect>previewAspect){
+        float viewAspect = ((float) viewWidth) / viewHeight;
+        float previewAspect = ((float) config.getPreviewWidth()) / config.getPreviewHeight();
+
+        float scaleX = previewAspect / viewAspect;
+        matrix.postScale(scaleX, 1);
+        float scale = ((float) config.getPreviewHeight()) / ((float) viewHeight);
+        matrix.postScale(scale, scale);
+        if (config.getRotation() == 0) {
+            if (viewAspect > previewAspect) {
+                float vscale = ((float) viewWidth) / ((float) config.getPreviewWidth());
+                matrix.postScale(vscale, vscale);
+                matrix.postTranslate(0, (viewHeight - vscale * config.getPreviewHeight()) / 2);
+            } else {
+                float vscale = ((float) viewHeight) / ((float) config.getPreviewHeight());
+                matrix.postScale(vscale, vscale);
+                matrix.postTranslate(0, (viewWidth - vscale * config.getPreviewWidth()) / 2);
+            }
+        } else if (config.getRotation() == 90) {
             matrix.postRotate(90);
-            matrix.postTranslate(viewWidth/2,0);
-            matrix.postScale(1,viewAspect/previewAspect);
-        }else{
-            matrix.postRotate(90);
-            matrix.postScale(previewAspect,viewAspect);
+            matrix.postTranslate(config.getPreviewHeight(), 0);
+            previewAspect = 1 / previewAspect;
+            if (viewAspect > previewAspect) {
+                float vscale = ((float) viewWidth) / ((float) config.getPreviewHeight());
+                matrix.postScale(vscale, vscale);
+                matrix.postTranslate(0, (viewHeight - vscale * config.getPreviewWidth()) / 2);
+            } else {
+                float vscale = ((float) viewHeight) / ((float) config.getPreviewWidth());
+                matrix.postScale(vscale, vscale);
+                matrix.postTranslate(0, (viewWidth - vscale * config.getPreviewHeight()) / 2);
+            }
+        } else if (config.getRotation() == 180) {
+            matrix.postRotate(180);
+            matrix.postTranslate(config.getPreviewWidth(), config.getPreviewHeight());
+            if (viewAspect > previewAspect) {
+                float vscale = ((float) viewWidth) / ((float) config.getPreviewWidth());
+                matrix.postScale(vscale, vscale);
+                matrix.postTranslate(0, (viewHeight - vscale * config.getPreviewHeight()) / 2);
+            } else {
+                float vscale = ((float) viewHeight) / ((float) config.getPreviewHeight());
+                matrix.postScale(vscale, vscale);
+                matrix.postTranslate(0, (viewWidth - vscale * config.getPreviewWidth()) / 2);
+            }
+        } else {
+            matrix.postRotate(270);
+            matrix.postTranslate(0, config.getPreviewWidth());
+            previewAspect = 1 / previewAspect;
+            if (viewAspect > previewAspect) {
+                float vscale = ((float) viewWidth) / ((float) config.getPreviewHeight());
+                matrix.postScale(vscale, vscale);
+                matrix.postTranslate(0, (viewHeight - vscale * config.getPreviewWidth()) / 2);
+            } else {
+                float vscale = ((float) viewHeight) / ((float) config.getPreviewWidth());
+                matrix.postScale(vscale, vscale);
+                matrix.postTranslate(0, (viewWidth - vscale * config.getPreviewHeight()) / 2);
+            }
         }
         preview.setTransform(matrix);
-
-
     }
+
 
     private void init(AttributeSet attrs) {
         setState(STATE_IDLE);
         if (attrs == null) {
             config = new Config.Builder()
-                    .cameraId("0")
+                    .cameraId(-1)
                     .previewWidth(640)
                     .previewHeight(480)
                     .rotation(0)
                     .build();
         } else {
             TypedArray a = getContext().obtainStyledAttributes(attrs, R.styleable.Camera2View);
-            String cameraId = a.getString(R.styleable.Camera2View_c2v_camera_id);
-            if (TextUtils.isEmpty(cameraId)) {
-                cameraId = "0";
+            int cameraId = -1;
+            try {
+                cameraId = a.getInt(R.styleable.Camera2View_c2v_camera_id, -1);
+            } catch (Exception e) {
+                cameraId = -1;
             }
+
             config = new Config.Builder()
                     .cameraId(cameraId)
                     .previewWidth(a.getInt(R.styleable.Camera2View_c2v_preview_width, 640))
@@ -241,8 +273,12 @@ public class Camera2View extends FrameLayout {
         return state == STATE_PREPARED || state == STATE_PREVIEW_STOPPED;
     }
 
-    public synchronized boolean canStopPreview() {
+    public synchronized boolean isPreviewing() {
         return state == STATE_PREVIEWING;
+    }
+
+    public synchronized boolean isShutdown() {
+        return state == STATE_SHUTTING_DOWN || state == STATE_SHUTDOWN;
     }
 
 
@@ -259,7 +295,20 @@ public class Camera2View extends FrameLayout {
                 countDownLatch = new CountDownLatch(1);
                 ce = null;
                 try {
-                    cameraManager.openCamera(config.getCameraId(), new CameraDevice.StateCallback() {
+                    if (config.getCameraId() < 0) {
+                        throw new Exception("未配置摄像头id");
+                    }
+                    String cameraDeviceId = "";
+                    try {
+                        cameraDeviceId = cameraManager.getCameraIdList()[config.getCameraId()];
+                        if (TextUtils.isEmpty(cameraDeviceId)) {
+                            throw new Exception("没有找到匹配摄像头");
+                        }
+                    } catch (Exception e) {
+                        throw e;
+                    }
+
+                    cameraManager.openCamera(cameraDeviceId, new CameraDevice.StateCallback() {
                         @Override
                         public void onOpened(@NonNull CameraDevice camera) {
                             cameraDevice = camera;
@@ -480,11 +529,38 @@ public class Camera2View extends FrameLayout {
         });
     }
 
+    public void setCameraId(int id) {
+        submitTask(new Runnable() {
+            @Override
+            public void run() {
+                if (isShutdown()) return;
+                if (isPreviewing()) {
+                    stopPreview();
+                    submitTask(new Runnable() {
+                        @Override
+                        public void run() {
+                            config.setCameraId(id);
+                        }
+                    });
+                    startPreview();
+                } else {
+                    config.setCameraId(id);
+                }
+            }
+        });
+    }
+
+    public void setRotate(int degree) {
+        config.setRotation(degree);
+        requestLayout();
+    }
+
+
     public void stopPreview() {
         submitTask(new Runnable() {
             @Override
             public void run() {
-                if (!canStopPreview()) return;
+                if (!isPreviewing()) return;
                 setState(STATE_STOPPING_PREVIEWING);
                 try {
                     cameraCaptureSession.close();
@@ -511,7 +587,7 @@ public class Camera2View extends FrameLayout {
         submitTask(new Runnable() {
             @Override
             public void run() {
-                if (canStopPreview()) {
+                if (isPreviewing()) {
                     setState(STATE_SHUTTING_DOWN);
                     try {
                         cameraCaptureSession.close();
@@ -578,7 +654,7 @@ public class Camera2View extends FrameLayout {
         int previewWidth;
         int previewHeight;
         int rotation;
-        String cameraId;
+        int cameraId;
 
         public Config() {
         }
@@ -614,11 +690,11 @@ public class Camera2View extends FrameLayout {
             this.rotation = rotation;
         }
 
-        public String getCameraId() {
+        public int getCameraId() {
             return cameraId;
         }
 
-        public void setCameraId(String cameraId) {
+        public void setCameraId(int cameraId) {
             this.cameraId = cameraId;
         }
 
@@ -626,7 +702,7 @@ public class Camera2View extends FrameLayout {
             private int previewWidth;
             private int previewHeight;
             private int rotation;
-            private String cameraId;
+            private int cameraId;
 
             public Builder() {
             }
@@ -646,7 +722,7 @@ public class Camera2View extends FrameLayout {
                 return this;
             }
 
-            public Builder cameraId(String val) {
+            public Builder cameraId(int val) {
                 cameraId = val;
                 return this;
             }

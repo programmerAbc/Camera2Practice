@@ -15,29 +15,56 @@
 
         <com.practice.camera2practice.Camera2View
             android:id="@+id/cameraView"
-            app:c2v_camera_id="120"
-            app:c2v_preview_width="640"
-            app:c2v_preview_height="480"
-            app:c2v_preview_rotation="90"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            app:c2v_preview_height="480"
+            app:c2v_preview_width="640" />
 
+        <androidx.constraintlayout.helper.widget.Flow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:constraint_referenced_ids="startPreviewBtn,stopPreviewBtn,rotate0Btn,rotate90Btn,rotate180Btn,rotate270Btn"
+            app:flow_horizontalBias="0"
+            app:flow_horizontalStyle="packed"
+            app:flow_verticalBias="0"
+            app:flow_verticalStyle="packed"
+            app:flow_wrapMode="aligned" />
 
         <Button
             android:id="@+id/startPreviewBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="开始"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:text="开始" />
 
         <Button
             android:id="@+id/stopPreviewBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="停止"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:text="停止" />
+
+        <Button
+            android:id="@+id/rotate0Btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0" />
+
+        <Button
+            android:id="@+id/rotate90Btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="90" />
+
+        <Button
+            android:id="@+id/rotate180Btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="180" />
+
+        <Button
+            android:id="@+id/rotate270Btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="270" />
 
 
     </androidx.constraintlayout.widget.ConstraintLayout>
