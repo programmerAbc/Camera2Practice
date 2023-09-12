@@ -17,8 +17,8 @@
             android:id="@+id/cameraView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:c2v_preview_height="400"
-            app:c2v_preview_width="640" />
+            app:c2v_preview_height="720"
+            app:c2v_preview_width="1280" />
 
         <androidx.constraintlayout.helper.widget.Flow
             android:layout_width="match_parent"
