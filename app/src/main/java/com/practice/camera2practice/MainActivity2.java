@@ -2,6 +2,7 @@ package com.practice.camera2practice;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.databinding.DataBindingUtil;
 
@@ -29,7 +30,7 @@ public class MainActivity2 extends AppCompatActivity {
     }
 
     private void init() {
-        bd.cameraView.setCameraId(0);
+        bd.cameraView.setCameraId(1);
         bd.cameraView.startPreview();
         bd.startPreviewBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -67,7 +68,34 @@ public class MainActivity2 extends AppCompatActivity {
                 bd.cameraView.setRotate(270);
             }
         });
+        bd.action1Btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ConstraintLayout.LayoutParams layoutParams = (ConstraintLayout.LayoutParams) bd.cameraView.getLayoutParams();
+                layoutParams.leftMargin=50;
+                layoutParams.topMargin=50;
+                layoutParams.rightMargin=50;
+                layoutParams.bottomMargin=50;
+                bd.cameraView.setLayoutParams(layoutParams);
 
+
+
+            }
+        });
+        bd.action2Btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ConstraintLayout.LayoutParams layoutParams = (ConstraintLayout.LayoutParams) bd.cameraView.getLayoutParams();
+                layoutParams.leftMargin=0;
+                layoutParams.topMargin=0;
+                layoutParams.rightMargin=0;
+                layoutParams.bottomMargin=0;
+                bd.cameraView.setLayoutParams(layoutParams);
+
+
+
+            }
+        });
 
     }
 

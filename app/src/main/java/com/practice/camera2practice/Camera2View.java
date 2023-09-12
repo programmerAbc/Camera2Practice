@@ -224,16 +224,19 @@ public class Camera2View extends FrameLayout {
         preview.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
             @Override
             public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
+                Log.e(TAG, "onSurfaceTextureAvailable: " + surface);
                 handleOnSurfaceTextureAvailable(surface, width, height);
             }
 
             @Override
             public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {
+                Log.e(TAG, "onSurfaceTextureSizeChanged: " + surface);
                 surface.setDefaultBufferSize(config.getPreviewWidth(), config.getPreviewHeight());
             }
 
             @Override
             public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
+                Log.e(TAG, "onSurfaceTextureDestroyed: ");
                 stopPreview();
                 changeSurfaceState(SURFACE_STATE_DESTROYED);
                 return true;
