@@ -5,7 +5,9 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
+import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
+import android.graphics.YuvImage;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraDevice;
@@ -22,11 +24,15 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.TextureView;
+import android.view.View;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.ReadOnlyBufferException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -64,18 +70,21 @@ public class Camera2View extends FrameLayout {
     int state = STATE_IDLE;
     int surfaceState = SURFACE_STATE_IDLE;
     Handler mainHandler;
-
+    int userIntent = STATE_IDLE;
     Config config;
     CameraManager cameraManager;
     ImageReader imageReader;
     Surface previewSurface;
     FrameLayout previewContainer;
+    FrameLayout coverContainer;
 
     Lock surfaceStateLock = new ReentrantLock();
     Condition surfaceStateCondition = surfaceStateLock.newCondition();
 
 
     CameraDevice cameraDevice = null;
+    Callback callback = null;
+    View coverLayout;
 
 
     CameraCaptureSession cameraCaptureSession;
@@ -97,6 +106,13 @@ public class Camera2View extends FrameLayout {
         init(attrs);
     }
 
+    public Callback getCallback() {
+        return callback;
+    }
+
+    public void setCallback(Callback callback) {
+        this.callback = callback;
+    }
 
     private void changeSurfaceState(int state) {
         try {
@@ -115,6 +131,12 @@ public class Camera2View extends FrameLayout {
         } catch (Exception e) {
 
         }
+    }
+
+
+    private void setUserIntent(int userIntent) {
+        this.userIntent = userIntent;
+        coverLayout.setVisibility(userIntent == STATE_PREVIEWING ? View.INVISIBLE : View.VISIBLE);
     }
 
     private void handleOnSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
@@ -191,34 +213,33 @@ public class Camera2View extends FrameLayout {
 
     private void init(AttributeSet attrs) {
         setState(STATE_IDLE);
+        int coverLayoutId = 0;
         if (attrs == null) {
             config = new Config.Builder()
                     .cameraId(-1)
                     .previewWidth(640)
                     .previewHeight(480)
                     .rotation(0)
+                    .needJpg(false)
                     .build();
+            coverLayoutId = R.layout.camera2view_default_cover_layout;
+
         } else {
             TypedArray a = getContext().obtainStyledAttributes(attrs, R.styleable.Camera2View);
-            int cameraId = -1;
-            try {
-                cameraId = a.getInt(R.styleable.Camera2View_c2v_camera_id, -1);
-            } catch (Exception e) {
-                cameraId = -1;
-            }
-
             config = new Config.Builder()
-                    .cameraId(cameraId)
+                    .cameraId(a.getInt(R.styleable.Camera2View_c2v_camera_id, -1))
                     .previewWidth(a.getInt(R.styleable.Camera2View_c2v_preview_width, 640))
                     .previewHeight(a.getInt(R.styleable.Camera2View_c2v_preview_height, 480))
                     .rotation(a.getInt(R.styleable.Camera2View_c2v_preview_rotation, 0))
+                    .needJpg(a.getBoolean(R.styleable.Camera2View_c2v_need_jpg, false))
                     .build();
+            coverLayoutId = a.getResourceId(R.styleable.Camera2View_c2v_cover_layout, R.layout.camera2view_default_cover_layout);
             a.recycle();
         }
         LayoutInflater.from(getContext()).inflate(R.layout.camera2view, this, true);
 
         previewContainer = findViewById(R.id.previewContainer);
-
+        coverContainer = findViewById(R.id.coverContainer);
 
         preview = new TextureView(getContext());
         preview.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
@@ -251,6 +272,10 @@ public class Camera2View extends FrameLayout {
             handleOnSurfaceTextureAvailable(preview.getSurfaceTexture(), preview.getWidth(), preview.getHeight());
         }
         previewContainer.addView(preview, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+
+        coverLayout = LayoutInflater.from(getContext()).inflate(coverLayoutId, coverContainer, true);
+
+
         singleThreadExecutor = Executors.newSingleThreadExecutor();
         cameraManager = (CameraManager) getContext().getSystemService(Context.CAMERA_SERVICE);
         cameraThread = new HandlerThread("cameraThread");
@@ -260,6 +285,7 @@ public class Camera2View extends FrameLayout {
         cameraHandler = new Handler(cameraThread.getLooper());
         imageHandler = new Handler(imageThread.getLooper());
         mainHandler = new Handler(Looper.getMainLooper());
+        setUserIntent(STATE_IDLE);
         setState(STATE_PREPARED);
     }
 
@@ -287,6 +313,13 @@ public class Camera2View extends FrameLayout {
 
     @SuppressLint({"MissingPermission", "WrongConstant"})
     public void startPreview() {
+        if (userIntent != STATE_SHUTDOWN) {
+            setUserIntent(STATE_PREVIEWING);
+        } else {
+            setUserIntent(STATE_SHUTDOWN);
+        }
+
+
         submitTask(new Runnable() {
             Throwable ce = null;
             CountDownLatch countDownLatch = null;
@@ -404,10 +437,19 @@ public class Camera2View extends FrameLayout {
                         @Override
                         public void onImageAvailable(ImageReader reader) {
                             try {
-
                                 Image image = reader.acquireLatestImage();
+                                try {
+                                    if ((callback != null) && (userIntent == STATE_PREVIEWING)) {
+                                        byte[] nv21 = Utils.yuv420_888toNV21(image);
+                                        byte[] jpg = null;
+                                        if (config.isNeedJpg()) {
+                                            jpg = Utils.nv21ToJpg(nv21, image.getWidth(), image.getHeight(), 100);
+                                        }
+                                        callback.imageData(nv21, jpg, image.getWidth(), image.getHeight());
+                                    }
+                                } catch (Exception e) {
 
-                                Log.e(TAG, "onImageAvailable: " + image.getWidth() + "," + image.getHeight());
+                                }
                                 image.close();
                             } catch (Exception e) {
                                 Log.e(TAG, "onImageAvailable: " + Log.getStackTraceString(e));
@@ -560,6 +602,11 @@ public class Camera2View extends FrameLayout {
 
 
     public void stopPreview() {
+        if (userIntent != STATE_SHUTDOWN) {
+            setUserIntent(STATE_PREVIEW_STOPPED);
+        } else {
+            setUserIntent(STATE_SHUTDOWN);
+        }
         submitTask(new Runnable() {
             @Override
             public void run() {
@@ -587,6 +634,7 @@ public class Camera2View extends FrameLayout {
     }
 
     public void destroy() {
+        setUserIntent(STATE_SHUTDOWN);
         submitTask(new Runnable() {
             @Override
             public void run() {
@@ -658,6 +706,7 @@ public class Camera2View extends FrameLayout {
         int previewHeight;
         int rotation;
         int cameraId;
+        boolean needJpg;
 
         public Config() {
         }
@@ -667,6 +716,7 @@ public class Camera2View extends FrameLayout {
             setPreviewHeight(builder.previewHeight);
             setRotation(builder.rotation);
             setCameraId(builder.cameraId);
+            setNeedJpg(builder.needJpg);
         }
 
         public int getPreviewWidth() {
@@ -701,11 +751,20 @@ public class Camera2View extends FrameLayout {
             this.cameraId = cameraId;
         }
 
+        public boolean isNeedJpg() {
+            return needJpg;
+        }
+
+        public void setNeedJpg(boolean needJpg) {
+            this.needJpg = needJpg;
+        }
+
         public static final class Builder {
             private int previewWidth;
             private int previewHeight;
             private int rotation;
             private int cameraId;
+            private boolean needJpg;
 
             public Builder() {
             }
@@ -730,10 +789,118 @@ public class Camera2View extends FrameLayout {
                 return this;
             }
 
+            public Builder needJpg(boolean val) {
+                needJpg = val;
+                return this;
+            }
+
             public Config build() {
                 return new Config(this);
             }
         }
     }
+
+
+    public interface Callback {
+        void imageData(byte[] nv21, byte[] jpg, int width, int height);
+    }
+
+    public static class Utils {
+        public static byte[] yuv420_888toNV21(Image image) {
+
+            int width = image.getWidth();
+            int height = image.getHeight();
+            int ySize = width * height;
+            int uvSize = width * height / 4;
+
+            byte[] nv21 = new byte[ySize + uvSize * 2];
+
+            ByteBuffer yBuffer = image.getPlanes()[0].getBuffer(); // Y
+            ByteBuffer uBuffer = image.getPlanes()[1].getBuffer(); // U
+            ByteBuffer vBuffer = image.getPlanes()[2].getBuffer(); // V
+
+            int rowStride = image.getPlanes()[0].getRowStride();
+            assert (image.getPlanes()[0].getPixelStride() == 1);
+
+            int pos = 0;
+
+            if (rowStride == width) { // likely
+                yBuffer.get(nv21, 0, ySize);
+                pos += ySize;
+            } else {
+                int yBufferPos = -rowStride; // not an actual position
+                for (; pos < ySize; pos += width) {
+                    yBufferPos += rowStride;
+                    yBuffer.position(yBufferPos);
+                    yBuffer.get(nv21, pos, width);
+                }
+            }
+
+            rowStride = image.getPlanes()[2].getRowStride();
+            int pixelStride = image.getPlanes()[2].getPixelStride();
+
+            assert (rowStride == image.getPlanes()[1].getRowStride());
+            assert (pixelStride == image.getPlanes()[1].getPixelStride());
+
+            if (pixelStride == 2 && rowStride == width && uBuffer.get(0) == vBuffer.get(1)) {
+                // maybe V an U planes overlap as per NV21, which means vBuffer[1] is alias of uBuffer[0]
+                byte savePixel = vBuffer.get(1);
+                try {
+                    vBuffer.put(1, (byte) ~savePixel);
+                    if (uBuffer.get(0) == (byte) ~savePixel) {
+                        vBuffer.put(1, savePixel);
+                        vBuffer.position(0);
+                        uBuffer.position(0);
+                        vBuffer.get(nv21, ySize, 1);
+                        uBuffer.get(nv21, ySize + 1, uBuffer.remaining());
+
+                        return nv21; // shortcut
+                    }
+                } catch (ReadOnlyBufferException ex) {
+                    // unfortunately, we cannot check if vBuffer and uBuffer overlap
+                }
+
+                // unfortunately, the check failed. We must save U and V pixel by pixel
+                vBuffer.put(1, savePixel);
+            }
+
+            // other optimizations could check if (pixelStride == 1) or (pixelStride == 2),
+            // but performance gain would be less significant
+
+            for (int row = 0; row < height / 2; row++) {
+                for (int col = 0; col < width / 2; col++) {
+                    int vuPos = col * pixelStride + row * rowStride;
+                    nv21[pos++] = vBuffer.get(vuPos);
+                    nv21[pos++] = uBuffer.get(vuPos);
+                }
+            }
+
+            return nv21;
+        }
+
+        public static byte[] nv21ToJpg(byte[] nv21, int width, int height, int quality) {
+            byte[] jpgData = null;
+            ByteArrayOutputStream byteArrayOutputStream = null;
+            try {
+                YuvImage yuvImage = new YuvImage(nv21, ImageFormat.NV21, width, height, null);
+                byteArrayOutputStream = new ByteArrayOutputStream();
+                yuvImage.compressToJpeg(new Rect(0, 0, width, height), quality, byteArrayOutputStream);
+                byteArrayOutputStream.flush();
+                jpgData = byteArrayOutputStream.toByteArray();
+            } catch (Exception e) {
+                jpgData = null;
+            }
+            try {
+                if (byteArrayOutputStream != null) {
+                    byteArrayOutputStream.close();
+                }
+            } catch (Exception e) {
+
+            }
+            return jpgData;
+        }
+
+    }
+
 
 }

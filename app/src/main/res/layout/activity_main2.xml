@@ -17,8 +17,19 @@
             android:id="@+id/cameraView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            app:c2v_need_jpg="true"
             app:c2v_preview_height="720"
             app:c2v_preview_width="1280" />
+
+        <ImageView
+            android:id="@+id/jpgIv"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="#000"
+            android:scaleType="fitCenter"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
+
 
         <androidx.constraintlayout.helper.widget.Flow
             android:layout_width="match_parent"
@@ -65,11 +76,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="270" />
+
         <Button
             android:id="@+id/action1Btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="action1" />
+
         <Button
             android:id="@+id/action2Btn"
             android:layout_width="wrap_content"
