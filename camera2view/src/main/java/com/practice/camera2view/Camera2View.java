@@ -220,7 +220,7 @@ public class Camera2View extends FrameLayout {
                     .previewWidth(640)
                     .previewHeight(480)
                     .rotation(0)
-                    .needJpg(false)
+                    .fast(false)
                     .build();
             coverLayoutId = R.layout.camera2view_default_cover_layout;
 
@@ -231,7 +231,7 @@ public class Camera2View extends FrameLayout {
                     .previewWidth(a.getInt(R.styleable.Camera2View_c2v_preview_width, 640))
                     .previewHeight(a.getInt(R.styleable.Camera2View_c2v_preview_height, 480))
                     .rotation(a.getInt(R.styleable.Camera2View_c2v_preview_rotation, 0))
-                    .needJpg(a.getBoolean(R.styleable.Camera2View_c2v_need_jpg, false))
+                    .fast(a.getBoolean(R.styleable.Camera2View_c2v_fast, false))
                     .build();
             coverLayoutId = a.getResourceId(R.styleable.Camera2View_c2v_cover_layout, R.layout.camera2view_default_cover_layout);
             a.recycle();
@@ -440,12 +440,23 @@ public class Camera2View extends FrameLayout {
                                 Image image = reader.acquireLatestImage();
                                 try {
                                     if ((callback != null) && (userIntent == STATE_PREVIEWING)) {
-                                        byte[] nv21 = Utils.yuv420_888toNV21(image);
-                                        byte[] jpg = null;
-                                        if (config.isNeedJpg()) {
-                                            jpg = Utils.nv21ToJpg(nv21, image.getWidth(), image.getHeight(), 100);
+                                        long startTime=System.currentTimeMillis();
+                                        byte[] nv21 = Utils.yuv420_888toNV21(config, image);
+                                        Log.e(TAG, "onImageAvailable: useTime"+(System.currentTimeMillis()-startTime));
+                                        int dWidth = 0;
+                                        int dHeight = 0;
+                                        switch (config.getRotation()) {
+                                            case 0:
+                                            case 180:
+                                                dWidth = image.getWidth();
+                                                dHeight = image.getHeight();
+                                                break;
+                                            default:
+                                                dWidth = image.getHeight();
+                                                dHeight =  image.getWidth();
+                                                break;
                                         }
-                                        callback.imageData(nv21, jpg, image.getWidth(), image.getHeight());
+                                        callback.imageData(nv21, dWidth, dHeight);
                                     }
                                 } catch (Exception e) {
 
@@ -706,7 +717,7 @@ public class Camera2View extends FrameLayout {
         int previewHeight;
         int rotation;
         int cameraId;
-        boolean needJpg;
+        boolean fast;
 
         public Config() {
         }
@@ -716,7 +727,15 @@ public class Camera2View extends FrameLayout {
             setPreviewHeight(builder.previewHeight);
             setRotation(builder.rotation);
             setCameraId(builder.cameraId);
-            setNeedJpg(builder.needJpg);
+            setFast(builder.fast);
+        }
+
+        public boolean isFast() {
+            return fast;
+        }
+
+        public void setFast(boolean fast) {
+            this.fast = fast;
         }
 
         public int getPreviewWidth() {
@@ -751,20 +770,12 @@ public class Camera2View extends FrameLayout {
             this.cameraId = cameraId;
         }
 
-        public boolean isNeedJpg() {
-            return needJpg;
-        }
-
-        public void setNeedJpg(boolean needJpg) {
-            this.needJpg = needJpg;
-        }
-
         public static final class Builder {
             private int previewWidth;
             private int previewHeight;
             private int rotation;
             private int cameraId;
-            private boolean needJpg;
+            private boolean fast;
 
             public Builder() {
             }
@@ -789,8 +800,8 @@ public class Camera2View extends FrameLayout {
                 return this;
             }
 
-            public Builder needJpg(boolean val) {
-                needJpg = val;
+            public Builder fast(boolean val) {
+                fast = val;
                 return this;
             }
 
@@ -802,12 +813,19 @@ public class Camera2View extends FrameLayout {
 
 
     public interface Callback {
-        void imageData(byte[] nv21, byte[] jpg, int width, int height);
+        void imageData(byte[] nv21, int width, int height);
     }
 
     public static class Utils {
-        public static byte[] yuv420_888toNV21(Image image) {
+        public static byte[] yuv420_888toNV21(Config config, Image image) {
+            if (config.isFast()) {
+                return yuv420_888toNV21ByNative(image, config);
+            } else {
+                return yuv420_888toNV21ByJava(image, config);
+            }
+        }
 
+        public static byte[] yuv420_888toNV21ByJava(Image image, Config config) {
             int width = image.getWidth();
             int height = image.getHeight();
             int ySize = width * height;
@@ -877,6 +895,72 @@ public class Camera2View extends FrameLayout {
 
             return nv21;
         }
+
+        public static byte[] yuv420_888toNV21ByNative(Image image, Config config) {
+            int width = image.getWidth();
+            int height = image.getHeight();
+            int ySize = width * height;
+            int uvSize = width * height / 4;
+
+            byte[] yuv = new byte[ySize + uvSize * 2];
+            Image.Plane yPlane = image.getPlanes()[0];
+            Image.Plane uPlane = image.getPlanes()[1];
+            Image.Plane vPlane = image.getPlanes()[2];
+
+            ByteBuffer yBuffer = yPlane.getBuffer(); // Y
+            ByteBuffer uBuffer = uPlane.getBuffer(); // U
+            ByteBuffer vBuffer = vPlane.getBuffer(); // V
+
+            byte[] yBytes = new byte[yBuffer.remaining()];
+            yBuffer.get(yBytes);
+            byte[] uBytes = new byte[uBuffer.remaining()];
+            uBuffer.get(uBytes);
+            byte[] vBytes = new byte[vBuffer.remaining()];
+            vBuffer.get(vBytes);
+            int yRowStride = yPlane.getRowStride();
+            int uRowStride = uPlane.getRowStride();
+            int vRowStride = vPlane.getRowStride();
+            int yPixelStride = yPlane.getPixelStride();
+            int uPixelStride = uPlane.getPixelStride();
+            int vPixelStride = vPlane.getPixelStride();
+            int pos = 0;
+
+            if (vRowStride == width && vPixelStride == 2 && uBytes[0] == vBytes[1]) {//NV21
+                System.arraycopy(yBytes, 0, yuv, 0, yBytes.length);
+                System.arraycopy(vBytes, 0, yuv, yBytes.length, vBytes.length);
+                if (config.getRotation() != 0) {
+                    return LibYuv.rotateNV21(yuv, width, height, config.getRotation());
+                } else {
+                    return yuv;
+                }
+            } else {//I420
+                System.arraycopy(yBytes, 0, yuv, 0, yBytes.length);
+                System.arraycopy(uBytes, 0, yuv, yBytes.length, uBytes.length);
+                System.arraycopy(vBytes, 0, yuv, yBytes.length + uBytes.length, vBytes.length);
+
+                if (config.getRotation() != 0) {
+                    byte[] i420 = LibYuv.rotateI420(yuv, width, height, config.getRotation());
+                    int dWidth = 0;
+                    int dHeight = 0;
+                    switch (config.getRotation()) {
+                        case 0:
+                        case 180:
+                            dWidth = width;
+                            dHeight = height;
+                            break;
+                        default:
+                            dWidth = height;
+                            dHeight = width;
+                            break;
+                    }
+                    return LibYuv.i420ToNV21(i420, dWidth, dHeight);
+                } else {
+                    return LibYuv.i420ToNV21(yuv, width, height);
+                }
+
+            }
+        }
+
 
         public static byte[] nv21ToJpg(byte[] nv21, int width, int height, int quality) {
             byte[] jpgData = null;

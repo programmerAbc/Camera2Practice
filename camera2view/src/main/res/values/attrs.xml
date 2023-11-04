@@ -6,8 +6,8 @@
         <attr name="c2v_preview_width" format="integer" />
         <attr name="c2v_preview_height" format="integer" />
         <attr name="c2v_preview_rotation" format="integer" />
-        <attr name="c2v_need_jpg" format="boolean" />
         <attr name="c2v_cover_layout" format="reference" />
+        <attr name="c2v_fast" format="boolean" />
     </declare-styleable>
 
 </resources>

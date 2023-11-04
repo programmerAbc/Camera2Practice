@@ -1,31 +1,34 @@
 package com.practice.camera2practice;
 
+import android.Manifest;
+import android.graphics.Bitmap;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.View;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.databinding.DataBindingUtil;
 
-import android.Manifest;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.view.View;
 
-import com.practice.camera2practice.databinding.ActivityMain2Binding;
+import com.practice.camera2practice.databinding.ActivityMainBinding;
 import com.practice.camera2view.Camera2View;
+import com.practice.camera2view.PreviewFrame;
 
 public class MainActivity extends AppCompatActivity {
-    ActivityMain2Binding bd;
+    ActivityMainBinding bd;
     Handler mainHandler;
+    PreviewFrame previewFrame;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        previewFrame = new PreviewFrame();
         mainHandler = new Handler(Looper.getMainLooper());
-        bd = DataBindingUtil.setContentView(this, R.layout.activity_main2);
+        bd = DataBindingUtil.setContentView(this, R.layout.activity_main);
         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 1);
 
     }
@@ -38,27 +41,17 @@ public class MainActivity extends AppCompatActivity {
 
     private void init() {
         bd.cameraView.setCameraId(0);
-        bd.cameraView.setRotate(90);
+        bd.cameraView.setRotate(0);
         bd.cameraView.setCallback(new Camera2View.Callback() {
             @Override
-            public void imageData(byte[] nv21, byte[] jpg, int width, int height) {
-                mainHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        Bitmap bitmap = BitmapFactory.decodeByteArray(jpg, 0, jpg.length);
-                        bd.jpgIv.setImageBitmap(bitmap);
-                    }
-                });
+            public void imageData(byte[] nv21, int width, int height) {
+                previewFrame.update(nv21, width, height);
             }
         });
         bd.cameraView.startPreview();
         bd.startPreviewBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-                bd.cameraView.startPreview();
-                bd.cameraView.startPreview();
-                bd.cameraView.stopPreview();
                 bd.cameraView.startPreview();
             }
         });
@@ -116,6 +109,12 @@ public class MainActivity extends AppCompatActivity {
                 bd.cameraView.setLayoutParams(layoutParams);
 
 
+            }
+        });
+        previewFrame.addCallback(new PreviewFrame.Callback() {
+            @Override
+            public void preview(Bitmap bitmap) {
+                bd.previewIv.setImageBitmap(bitmap);
             }
         });
 
