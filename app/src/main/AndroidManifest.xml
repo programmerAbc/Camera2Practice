@@ -19,7 +19,7 @@
         android:theme="@style/Theme.Camera2Practice"
         tools:targetApi="31">
         <activity
-            android:name=".MainActivity"
+            android:name=".MainActivity2"
             android:configChanges="screenSize|orientation|keyboard|keyboardHidden"
             android:exported="true" >
             <intent-filter>
@@ -27,8 +27,14 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
 
+        </activity>
+        <activity
+            android:name=".MainActivity"
+            android:configChanges="screenSize|orientation|keyboard|keyboardHidden"
+            android:exported="false">
+
+        </activity>
     </application>
 
 </manifest>

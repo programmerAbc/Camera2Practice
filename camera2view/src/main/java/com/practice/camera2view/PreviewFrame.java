@@ -3,6 +3,7 @@ package com.practice.camera2view;
 import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 import androidx.annotation.UiThread;
 
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class PreviewFrame {
+    public static final String TAG = "PreviewFrame";
     Bitmap bitmap = null;
     Handler mainHandler = null;
     AtomicBoolean previewFlag = null;
@@ -60,7 +62,11 @@ public class PreviewFrame {
         if (!previewFlag.compareAndSet(false, true)) {
             return;
         }
+        long startTime = System.currentTimeMillis();
         final byte[] argb = LibYuv.nv21ToArgb(nv21, width, height);
+        Log.e(TAG, "update: useTime:" + (System.currentTimeMillis() - startTime));
+
+
         mainHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -69,18 +75,18 @@ public class PreviewFrame {
                         bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
                     }
                     bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(argb));
-                } catch (Exception e) {
-                }
-                try {
-                    for (Callback callback : callbackList) {
-                        try {
-                            callback.preview(bitmap);
-                        } catch (Exception e) {
+                    try {
+                        for (Callback callback : callbackList) {
+                            try {
+                                callback.preview(bitmap);
+                            } catch (Exception e) {
 
+                            }
                         }
+                    } catch (Exception e) {
+
                     }
                 } catch (Exception e) {
-
                 }
                 previewFlag.set(false);
             }

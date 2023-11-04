@@ -16,6 +16,7 @@ import androidx.databinding.DataBindingUtil;
 
 import com.practice.camera2practice.databinding.ActivityMainBinding;
 import com.practice.camera2view.Camera2View;
+import com.practice.camera2view.ImageDataCallback;
 import com.practice.camera2view.PreviewFrame;
 
 public class MainActivity extends AppCompatActivity {
@@ -42,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
     private void init() {
         bd.cameraView.setCameraId(0);
         bd.cameraView.setRotate(0);
-        bd.cameraView.setCallback(new Camera2View.Callback() {
+        bd.cameraView.setCallback(new ImageDataCallback() {
             @Override
             public void imageData(byte[] nv21, int width, int height) {
                 previewFrame.update(nv21, width, height);

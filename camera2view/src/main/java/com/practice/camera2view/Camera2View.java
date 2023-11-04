@@ -83,7 +83,7 @@ public class Camera2View extends FrameLayout {
 
 
     CameraDevice cameraDevice = null;
-    Callback callback = null;
+    ImageDataCallback callback = null;
     View coverLayout;
 
 
@@ -106,11 +106,11 @@ public class Camera2View extends FrameLayout {
         init(attrs);
     }
 
-    public Callback getCallback() {
+    public ImageDataCallback getCallback() {
         return callback;
     }
 
-    public void setCallback(Callback callback) {
+    public void setCallback(ImageDataCallback callback) {
         this.callback = callback;
     }
 
@@ -441,11 +441,14 @@ public class Camera2View extends FrameLayout {
                                 try {
                                     if ((callback != null) && (userIntent == STATE_PREVIEWING)) {
                                         long startTime=System.currentTimeMillis();
-                                        byte[] nv21 = Utils.yuv420_888toNV21(config, image);
+                                        boolean fast=config.isFast();
+                                        int rotation=config.getRotation();
+
+                                        byte[] nv21 = Utils.yuv420_888toNV21(fast,rotation, image);
                                         Log.e(TAG, "onImageAvailable: useTime"+(System.currentTimeMillis()-startTime));
                                         int dWidth = 0;
                                         int dHeight = 0;
-                                        switch (config.getRotation()) {
+                                        switch (rotation) {
                                             case 0:
                                             case 180:
                                                 dWidth = image.getWidth();
@@ -712,120 +715,16 @@ public class Camera2View extends FrameLayout {
     }
 
 
-    public static class Config {
-        int previewWidth;
-        int previewHeight;
-        int rotation;
-        int cameraId;
-        boolean fast;
-
-        public Config() {
-        }
-
-        private Config(Builder builder) {
-            setPreviewWidth(builder.previewWidth);
-            setPreviewHeight(builder.previewHeight);
-            setRotation(builder.rotation);
-            setCameraId(builder.cameraId);
-            setFast(builder.fast);
-        }
-
-        public boolean isFast() {
-            return fast;
-        }
-
-        public void setFast(boolean fast) {
-            this.fast = fast;
-        }
-
-        public int getPreviewWidth() {
-            return previewWidth;
-        }
-
-        public void setPreviewWidth(int previewWidth) {
-            this.previewWidth = previewWidth;
-        }
-
-        public int getPreviewHeight() {
-            return previewHeight;
-        }
-
-        public void setPreviewHeight(int previewHeight) {
-            this.previewHeight = previewHeight;
-        }
-
-        public int getRotation() {
-            return rotation;
-        }
-
-        public void setRotation(int rotation) {
-            this.rotation = rotation;
-        }
-
-        public int getCameraId() {
-            return cameraId;
-        }
-
-        public void setCameraId(int cameraId) {
-            this.cameraId = cameraId;
-        }
-
-        public static final class Builder {
-            private int previewWidth;
-            private int previewHeight;
-            private int rotation;
-            private int cameraId;
-            private boolean fast;
-
-            public Builder() {
-            }
-
-            public Builder previewWidth(int val) {
-                previewWidth = val;
-                return this;
-            }
-
-            public Builder previewHeight(int val) {
-                previewHeight = val;
-                return this;
-            }
-
-            public Builder rotation(int val) {
-                rotation = val;
-                return this;
-            }
-
-            public Builder cameraId(int val) {
-                cameraId = val;
-                return this;
-            }
-
-            public Builder fast(boolean val) {
-                fast = val;
-                return this;
-            }
-
-            public Config build() {
-                return new Config(this);
-            }
-        }
-    }
-
-
-    public interface Callback {
-        void imageData(byte[] nv21, int width, int height);
-    }
-
     public static class Utils {
-        public static byte[] yuv420_888toNV21(Config config, Image image) {
-            if (config.isFast()) {
-                return yuv420_888toNV21ByNative(image, config);
+        public static byte[] yuv420_888toNV21(boolean fast,int rotation, Image image) {
+            if (fast) {
+                return yuv420_888toNV21ByNative(image, rotation);
             } else {
-                return yuv420_888toNV21ByJava(image, config);
+                return yuv420_888toNV21ByJava(image, rotation);
             }
         }
 
-        public static byte[] yuv420_888toNV21ByJava(Image image, Config config) {
+        public static byte[] yuv420_888toNV21ByJava(Image image,int rotation) {
             int width = image.getWidth();
             int height = image.getHeight();
             int ySize = width * height;
@@ -896,7 +795,7 @@ public class Camera2View extends FrameLayout {
             return nv21;
         }
 
-        public static byte[] yuv420_888toNV21ByNative(Image image, Config config) {
+        public static byte[] yuv420_888toNV21ByNative(Image image, int rotation) {
             int width = image.getWidth();
             int height = image.getHeight();
             int ySize = width * height;
@@ -924,12 +823,11 @@ public class Camera2View extends FrameLayout {
             int uPixelStride = uPlane.getPixelStride();
             int vPixelStride = vPlane.getPixelStride();
             int pos = 0;
-
             if (vRowStride == width && vPixelStride == 2 && uBytes[0] == vBytes[1]) {//NV21
                 System.arraycopy(yBytes, 0, yuv, 0, yBytes.length);
                 System.arraycopy(vBytes, 0, yuv, yBytes.length, vBytes.length);
-                if (config.getRotation() != 0) {
-                    return LibYuv.rotateNV21(yuv, width, height, config.getRotation());
+                if (rotation != 0) {
+                    return LibYuv.rotateNV21(yuv, width, height, rotation);
                 } else {
                     return yuv;
                 }
@@ -938,11 +836,11 @@ public class Camera2View extends FrameLayout {
                 System.arraycopy(uBytes, 0, yuv, yBytes.length, uBytes.length);
                 System.arraycopy(vBytes, 0, yuv, yBytes.length + uBytes.length, vBytes.length);
 
-                if (config.getRotation() != 0) {
-                    byte[] i420 = LibYuv.rotateI420(yuv, width, height, config.getRotation());
+                if (rotation != 0) {
+                    byte[] i420 = LibYuv.rotateI420(yuv, width, height, rotation);
                     int dWidth = 0;
                     int dHeight = 0;
-                    switch (config.getRotation()) {
+                    switch (rotation) {
                         case 0:
                         case 180:
                             dWidth = width;
