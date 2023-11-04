@@ -1,4 +1,4 @@
-package com.practice.camera2practice;
+package com.practice.camera2view;
 
 import android.annotation.SuppressLint;
 import android.content.Context;

@@ -2,57 +2,33 @@ package com.practice.camera2practice;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.viewfinder.CameraViewfinder;
-import androidx.camera.viewfinder.ViewfinderSurfaceRequest;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.databinding.DataBindingUtil;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
-import android.content.Context;
-import android.graphics.ImageFormat;
-import android.graphics.PixelFormat;
-import android.hardware.camera2.CameraAccessException;
-import android.hardware.camera2.CameraCaptureSession;
-import android.hardware.camera2.CameraCharacteristics;
-import android.hardware.camera2.CameraDevice;
-import android.hardware.camera2.CameraManager;
-import android.hardware.camera2.CaptureRequest;
-import android.media.Image;
-import android.media.ImageReader;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.HandlerThread;
-import android.util.Log;
-import android.util.Size;
-import android.view.Surface;
+import android.os.Looper;
+import android.view.View;
 
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.practice.camera2practice.databinding.ActivityMainBinding;
-
-import java.util.ArrayList;
+import com.practice.camera2practice.databinding.ActivityMain2Binding;
+import com.practice.camera2view.Camera2View;
 
 public class MainActivity extends AppCompatActivity {
-    public static final String TAG = MainActivity.class.getSimpleName();
-    ActivityMainBinding bd;
-    CameraManager manager;
-    CameraCharacteristics cameraCharacteristics;
-
-    HandlerThread cameraThread;
-    HandlerThread imageThread;
-    Handler cameraHandler;
-    Handler imageHandler;
+    ActivityMain2Binding bd;
+    Handler mainHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        bd = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        mainHandler = new Handler(Looper.getMainLooper());
+        bd = DataBindingUtil.setContentView(this, R.layout.activity_main2);
         ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 1);
-    }
 
+    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -60,96 +36,95 @@ public class MainActivity extends AppCompatActivity {
         init();
     }
 
-    @SuppressLint("MissingPermission")
     private void init() {
-        cameraThread = new HandlerThread("cameraThread");
-        cameraThread.start();
-        cameraHandler = new Handler(cameraThread.getLooper());
-        imageThread = new HandlerThread("imageThread");
-        imageThread.start();
-        imageHandler = new Handler(imageThread.getLooper());
-        manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        try {
-            cameraCharacteristics = manager.getCameraCharacteristics("0");
-        } catch (CameraAccessException e) {
-            throw new RuntimeException(e);
-        }
-
-
-        Size previewResolution = new Size(640, 480);
-        ViewfinderSurfaceRequest viewfinderSurfaceRequest = new ViewfinderSurfaceRequest.Builder(previewResolution)
-                .setLensFacing(CameraCharacteristics.LENS_FACING_FRONT)
-                .setSensorOrientation(90)
-                .build();
-        ListenableFuture<Surface> surfaceListenableFuture = bd.frontVF.requestSurfaceAsync(viewfinderSurfaceRequest);
-        Futures.addCallback(surfaceListenableFuture, new FutureCallback<Surface>() {
+        bd.cameraView.setCameraId(0);
+        bd.cameraView.setRotate(90);
+        bd.cameraView.setCallback(new Camera2View.Callback() {
             @Override
-            public void onSuccess(Surface result) {
-
-                ImageReader imageReader = ImageReader.newInstance(640, 480, ImageFormat.YUV_420_888, 2);
-                imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
+            public void imageData(byte[] nv21, byte[] jpg, int width, int height) {
+                mainHandler.post(new Runnable() {
                     @Override
-                    public void onImageAvailable(ImageReader reader) {
-                        Image image = reader.acquireLatestImage();
-                        Log.e(TAG, "onImageAvailable: " + image.getWidth() + "," + image.getHeight());
-                        image.close();
+                    public void run() {
+                        Bitmap bitmap = BitmapFactory.decodeByteArray(jpg, 0, jpg.length);
+                        bd.jpgIv.setImageBitmap(bitmap);
                     }
-                }, imageHandler);
-                ArrayList<Surface> surfaces = new ArrayList<>();
-                surfaces.add(result);
-                surfaces.add(imageReader.getSurface());
-                try {
-                    manager.openCamera("1", new CameraDevice.StateCallback() {
-                        @Override
-                        public void onOpened(@NonNull CameraDevice camera) {
-                            try {
-                                camera.createCaptureSession(surfaces, new CameraCaptureSession.StateCallback() {
-                                    @Override
-                                    public void onConfigured(@NonNull CameraCaptureSession session) {
-                                        try {
-                                            CaptureRequest.Builder builder = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-                                            builder.addTarget(result);
-                                            builder.addTarget(imageReader.getSurface());
-                                            session.setRepeatingRequest(builder.build(), null, cameraHandler);
-                                            session.stopRepeating();
-                                        } catch (CameraAccessException e) {
-                                            throw new RuntimeException(e);
-                                        }
-                                    }
-
-                                    @Override
-                                    public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-
-                                    }
-                                }, cameraHandler);
-                            } catch (CameraAccessException e) {
-                                throw new RuntimeException(e);
-                            }
-                        }
-
-                        @Override
-                        public void onDisconnected(@NonNull CameraDevice camera) {
-
-                        }
-
-                        @Override
-                        public void onError(@NonNull CameraDevice camera, int error) {
-
-                        }
-                    }, cameraHandler);
-                } catch (CameraAccessException e) {
-                    throw new RuntimeException(e);
-                }
-
-
+                });
             }
-
+        });
+        bd.cameraView.startPreview();
+        bd.startPreviewBtn.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onFailure(Throwable t) {
+            public void onClick(View v) {
+
+                bd.cameraView.startPreview();
+                bd.cameraView.startPreview();
+                bd.cameraView.stopPreview();
+                bd.cameraView.startPreview();
+            }
+        });
+        bd.stopPreviewBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                bd.cameraView.stopPreview();
+            }
+        });
+        bd.rotate0Btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                bd.cameraView.setRotate(0);
+            }
+        });
+        bd.rotate90Btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                bd.cameraView.setRotate(90);
+            }
+        });
+        bd.rotate180Btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                bd.cameraView.setRotate(180);
+            }
+        });
+        bd.rotate270Btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                bd.cameraView.setRotate(270);
+            }
+        });
+        bd.action1Btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ConstraintLayout.LayoutParams layoutParams = (ConstraintLayout.LayoutParams) bd.cameraView.getLayoutParams();
+                layoutParams.leftMargin = 50;
+                layoutParams.topMargin = 50;
+                layoutParams.rightMargin = 50;
+                layoutParams.bottomMargin = 50;
+                bd.cameraView.setLayoutParams(layoutParams);
+
 
             }
-        }, ContextCompat.getMainExecutor(MainActivity.this));
+        });
+        bd.action2Btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ConstraintLayout.LayoutParams layoutParams = (ConstraintLayout.LayoutParams) bd.cameraView.getLayoutParams();
+                layoutParams.leftMargin = 0;
+                layoutParams.topMargin = 0;
+                layoutParams.rightMargin = 0;
+                layoutParams.bottomMargin = 0;
+                bd.cameraView.setLayoutParams(layoutParams);
 
 
+            }
+        });
+
+    }
+
+    @Override
+    protected void onDestroy() {
+
+        bd.cameraView.destroy();
+        super.onDestroy();
     }
 }

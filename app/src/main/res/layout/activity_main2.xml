@@ -10,10 +10,10 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:context=".MainActivity2">
+        tools:context=".MainActivity">
 
 
-        <com.practice.camera2practice.Camera2View
+        <com.practice.camera2view.Camera2View
             android:id="@+id/cameraView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
