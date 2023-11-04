@@ -10,70 +10,86 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#fff"
         tools:context=".MainActivity">
 
 
-        <androidx.camera.viewfinder.CameraViewfinder
-            android:id="@+id/frontVF"
+        <com.practice.camera2view.Camera2View
+            android:id="@+id/cameraView"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            app:scaleType="fillCenter"
-            app:implementationMode="compatible"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHeight_percent="0.4"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:layout_height="match_parent"
+            app:c2v_fast="true"
+            app:c2v_preview_height="480"
+            app:c2v_preview_width="640" />
 
-        <androidx.camera.viewfinder.CameraViewfinder
-            android:id="@+id/backVF"
-            app:scaleType="fitCenter"
-            app:implementationMode="compatible"
-            android:layout_width="match_parent"
+        <ImageView
+            android:id="@+id/previewIv"
+            android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_marginTop="10dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHeight_percent="0.4"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/frontVF" />
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:id="@+id/buttonLayout"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
+            android:background="#000"
+            android:scaleType="centerCrop"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/backVF">
-
-            <androidx.constraintlayout.helper.widget.Flow
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:constraint_referenced_ids="startPreview,stopPreview"
-                app:flow_horizontalGap="10dp"
-                app:flow_verticalGap="10dp"
-                app:flow_wrapMode="chain"
-                app:flow_horizontalStyle="packed"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <Button
-                android:id="@+id/startPreview"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="开始预览" />
-
-            <Button
-                android:id="@+id/stopPreview"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="结束预览" />
+            app:layout_constraintHeight_percent="0.5"
+            app:layout_constraintWidth_percent="0.5" />
 
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
+        <androidx.constraintlayout.helper.widget.Flow
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:constraint_referenced_ids="startPreviewBtn,stopPreviewBtn,rotate0Btn,rotate90Btn,rotate180Btn,rotate270Btn,action1Btn,action2Btn"
+            app:flow_horizontalBias="0"
+            app:flow_horizontalStyle="packed"
+            app:flow_verticalBias="0"
+            app:flow_verticalStyle="packed"
+            app:flow_wrapMode="aligned" />
 
+        <Button
+            android:id="@+id/startPreviewBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="开始" />
+
+        <Button
+            android:id="@+id/stopPreviewBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="停止" />
+
+        <Button
+            android:id="@+id/rotate0Btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0" />
+
+        <Button
+            android:id="@+id/rotate90Btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="90" />
+
+        <Button
+            android:id="@+id/rotate180Btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="180" />
+
+        <Button
+            android:id="@+id/rotate270Btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="270" />
+
+        <Button
+            android:id="@+id/action1Btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="action1" />
+
+        <Button
+            android:id="@+id/action2Btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="action2" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>
