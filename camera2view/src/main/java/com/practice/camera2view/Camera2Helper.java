@@ -194,7 +194,7 @@ public class Camera2Helper {
                                         int rotation=config.getRotation();
 
                                         byte[] nv21 = Camera2View.Utils.yuv420_888toNV21(fast,rotation, image);
-                                        Log.e(TAG, "onImageAvailable: useTime"+(System.currentTimeMillis()-startTime));
+                                        Log.e(TAG, "yuv420_888toNV21: useTime"+(System.currentTimeMillis()-startTime));
                                         int dWidth = 0;
                                         int dHeight = 0;
                                         switch (rotation) {

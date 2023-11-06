@@ -64,17 +64,19 @@ public class PreviewFrame {
         }
         long startTime = System.currentTimeMillis();
         final byte[] argb = LibYuv.nv21ToArgb(nv21, width, height);
-        Log.e(TAG, "update: useTime:" + (System.currentTimeMillis() - startTime));
+        Log.e(TAG, "nv21ToArgb: useTime:" + (System.currentTimeMillis() - startTime));
 
 
         mainHandler.post(new Runnable() {
             @Override
             public void run() {
                 try {
+                    long startTime = System.currentTimeMillis();
                     if (bitmap == null || bitmap.getWidth() != width || bitmap.getHeight() != height) {
                         bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
                     }
                     bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(argb));
+                    Log.e(TAG, "updateBitmap: useTime:" + (System.currentTimeMillis() - startTime));
                     try {
                         for (Callback callback : callbackList) {
                             try {
